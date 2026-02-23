@@ -89,13 +89,13 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "com.dailytasker" "\0"
-            VALUE "FileDescription", "daily_tasker" "\0"
+            VALUE "CompanyName", "Daily Tasker" "\0"
+            VALUE "FileDescription", "Daily Tasker - Today-focused task manager" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
             VALUE "InternalName", "daily_tasker" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2026 com.dailytasker. All rights reserved." "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2026 Daily Tasker. All rights reserved." "\0"
             VALUE "OriginalFilename", "daily_tasker.exe" "\0"
-            VALUE "ProductName", "daily_tasker" "\0"
+            VALUE "ProductName", "Daily Tasker" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END
