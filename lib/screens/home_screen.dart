@@ -28,14 +28,6 @@ class HomeScreen extends StatelessWidget {
                   return ListView(
                     padding: const EdgeInsets.only(top: 4, bottom: 8),
                     children: [
-                      // DOING section - always on top, largest
-                      KanbanSection(
-                        title: 'DOING',
-                        sectionKey: 'doing',
-                        tasks: provider.doingTasks,
-                        totalCount: provider.doingTasks.length,
-                      ),
-                      const Divider(height: 1, color: AppColors.divider, indent: 12, endIndent: 12),
                       // STOCK section with filter
                       KanbanSection(
                         title: 'STOCK',
@@ -44,6 +36,14 @@ class HomeScreen extends StatelessWidget {
                         totalCount: provider.stockTasks.length,
                         showStatusTags: true,
                         trailing: _StockFilter(provider: provider),
+                      ),
+                      const Divider(height: 1, color: AppColors.divider, indent: 12, endIndent: 12),
+                      // DOING section
+                      KanbanSection(
+                        title: 'DOING',
+                        sectionKey: 'doing',
+                        tasks: provider.doingTasks,
+                        totalCount: provider.doingTasks.length,
                       ),
                       const Divider(height: 1, color: AppColors.divider, indent: 12, endIndent: 12),
                       // REVIEW section
