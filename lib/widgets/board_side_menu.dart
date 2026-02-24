@@ -118,7 +118,7 @@ class _MenuPanel extends StatelessWidget {
                 ),
               ),
               const Divider(height: 1, color: AppColors.divider),
-              _AddBoardButton(),
+              _AddBoardButton(onCreated: onClose),
             ],
           ),
         ),
@@ -389,100 +389,39 @@ class _BoardTileState extends State<_BoardTile> {
 
 // ─── Add board button ────────────────────────────────────────────────────────
 
-class _AddBoardButton extends StatefulWidget {
-  @override
-  State<_AddBoardButton> createState() => _AddBoardButtonState();
-}
+class _AddBoardButton extends StatelessWidget {
+  final VoidCallback onCreated;
+  const _AddBoardButton({required this.onCreated});
 
-class _AddBoardButtonState extends State<_AddBoardButton> {
-  bool _adding = false;
-  final _ctrl = TextEditingController();
-  final _focus = FocusNode();
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    _focus.dispose();
-    super.dispose();
-  }
-
-  void _submit() {
-    final name = _ctrl.text.trim();
-    if (name.isNotEmpty) {
-      context.read<TaskProvider>().addBoard(name);
-    }
-    _ctrl.clear();
-    setState(() => _adding = false);
+  Future<void> _create(BuildContext context) async {
+    final provider = context.read<TaskProvider>();
+    // 仮名: "Board N" (N = 既存ボード数 + 1)
+    final n = provider.boards.length + 1;
+    await provider.addBoard('Board $n');
+    onCreated(); // メニューを閉じる
   }
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(10),
-      child: _adding
-          ? Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _ctrl,
-                    focusNode: _focus,
-                    autofocus: true,
-                    style: const TextStyle(
-                        color: AppColors.textPrimary, fontSize: 13),
-                    decoration: const InputDecoration(
-                      isDense: true,
-                      hintText: 'Board name',
-                      contentPadding: EdgeInsets.symmetric(
-                          vertical: 6, horizontal: 8),
-                      filled: true,
-                      fillColor: AppColors.surfaceLight,
-                      border: OutlineInputBorder(
-                        borderSide:
-                            BorderSide(color: AppColors.stockAccent),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderSide: BorderSide(
-                            color: AppColors.stockAccent, width: 1.5),
-                      ),
-                    ),
-                    onSubmitted: (_) => _submit(),
-                    textInputAction: TextInputAction.done,
-                  ),
-                ),
-                const SizedBox(width: 6),
-                GestureDetector(
-                  onTap: _submit,
-                  child: const Icon(Icons.check,
-                      size: 18, color: AppColors.doneAccent),
-                ),
-                const SizedBox(width: 4),
-                GestureDetector(
-                  onTap: () {
-                    _ctrl.clear();
-                    setState(() => _adding = false);
-                  },
-                  child: const Icon(Icons.close,
-                      size: 18, color: AppColors.textMuted),
-                ),
-              ],
-            )
-          : GestureDetector(
-              onTap: () => setState(() => _adding = true),
-              child: Row(
-                children: [
-                  const Icon(Icons.add, size: 16, color: AppColors.stockAccent),
-                  const SizedBox(width: 6),
-                  const Text(
-                    'Add new board',
-                    style: TextStyle(
-                      color: AppColors.stockAccent,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
+      child: GestureDetector(
+        onTap: () => _create(context),
+        child: Row(
+          children: [
+            const Icon(Icons.add, size: 16, color: AppColors.stockAccent),
+            const SizedBox(width: 6),
+            const Text(
+              'Add new board',
+              style: TextStyle(
+                color: AppColors.stockAccent,
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
               ),
             ),
+          ],
+        ),
+      ),
     );
   }
 }
