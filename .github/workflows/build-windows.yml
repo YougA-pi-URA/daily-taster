@@ -19,7 +19,8 @@ permissions:
 jobs:
   build-windows:
     name: Build Windows Desktop
-    runs-on: windows-latest
+    # runs-on: windows-latest
+    runs-on: self-hosted
 
     steps:
       - name: Checkout repository
