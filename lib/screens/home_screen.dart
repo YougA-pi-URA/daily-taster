@@ -113,8 +113,56 @@ class HomeScreen extends StatelessWidget {
   }
 }
 
-class _Header extends StatelessWidget {
+class _Header extends StatefulWidget {
   const _Header();
+
+  @override
+  State<_Header> createState() => _HeaderState();
+}
+
+class _HeaderState extends State<_Header> {
+  bool _editing = false;
+  late TextEditingController _ctrl;
+  final FocusNode _focusNode = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = TextEditingController();
+    _focusNode.addListener(() {
+      if (!_focusNode.hasFocus && _editing) {
+        _save();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  void _startEdit(String currentName) {
+    setState(() {
+      _ctrl.text = currentName;
+      _editing = true;
+    });
+    // フォーカスを次フレームで当てる
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _focusNode.requestFocus();
+      _ctrl.selection = TextSelection(
+        baseOffset: 0,
+        extentOffset: _ctrl.text.length,
+      );
+    });
+  }
+
+  void _save() {
+    final provider = context.read<TaskProvider>();
+    provider.setBoardName(_ctrl.text);
+    setState(() => _editing = false);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -122,31 +170,75 @@ class _Header extends StatelessWidget {
     final dateStr = DateFormat('M/d').format(now);
     final dayStr = DateFormat('E').format(now);
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      child: Row(
-        children: [
-          // App title
-          const Text(
-            'Daily Tasker',
-            style: TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
-              letterSpacing: -0.3,
-            ),
+    return Consumer<TaskProvider>(
+      builder: (context, provider, _) {
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          child: Row(
+            children: [
+              // Board name (tappable / editable)
+              Expanded(
+                child: _editing
+                    ? TextField(
+                        controller: _ctrl,
+                        focusNode: _focusNode,
+                        style: const TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: -0.3,
+                        ),
+                        decoration: const InputDecoration(
+                          isDense: true,
+                          contentPadding: EdgeInsets.symmetric(vertical: 2, horizontal: 4),
+                          border: OutlineInputBorder(
+                            borderSide: BorderSide(color: AppColors.stockAccent, width: 1),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderSide: BorderSide(color: AppColors.stockAccent, width: 1.5),
+                          ),
+                          filled: true,
+                          fillColor: AppColors.surfaceLight,
+                        ),
+                        onSubmitted: (_) => _save(),
+                        textInputAction: TextInputAction.done,
+                      )
+                    : GestureDetector(
+                        onTap: () => _startEdit(provider.boardName),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              provider.boardName,
+                              style: const TextStyle(
+                                color: AppColors.textPrimary,
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: -0.3,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            const Icon(
+                              Icons.edit,
+                              size: 11,
+                              color: AppColors.textMuted,
+                            ),
+                          ],
+                        ),
+                      ),
+              ),
+              // Date
+              Text(
+                '$dateStr $dayStr',
+                style: const TextStyle(
+                  color: AppColors.textMuted,
+                  fontSize: 12,
+                ),
+              ),
+            ],
           ),
-          const Spacer(),
-          // Date
-          Text(
-            '$dateStr $dayStr',
-            style: const TextStyle(
-              color: AppColors.textMuted,
-              fontSize: 12,
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

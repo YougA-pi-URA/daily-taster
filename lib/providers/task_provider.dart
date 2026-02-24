@@ -4,8 +4,14 @@ import '../models/task.dart';
 
 class TaskProvider extends ChangeNotifier {
   static const String _boxName = 'tasks';
+  static const String _metaBoxName = 'meta';
   late Box<Map> _box;
+  late Box _metaBox;
   List<Task> _tasks = [];
+
+  // Board name (persisted in meta box)
+  String _boardName = 'Daily Tasker';
+  String get boardName => _boardName;
 
   /// Filter for stock section: null = show all, or a specific origin
   TaskStatus? _stockFilter;
@@ -39,7 +45,16 @@ class TaskProvider extends ChangeNotifier {
   Future<void> init() async {
     await Hive.initFlutter();
     _box = await Hive.openBox<Map>(_boxName);
+    _metaBox = await Hive.openBox(_metaBoxName);
+    _boardName = (_metaBox.get('boardName') as String?) ?? 'Daily Tasker';
     _loadTasks();
+  }
+
+  /// Update board name
+  Future<void> setBoardName(String name) async {
+    _boardName = name.trim().isEmpty ? 'Daily Tasker' : name.trim();
+    await _metaBox.put('boardName', _boardName);
+    notifyListeners();
   }
 
   void _loadTasks() {
