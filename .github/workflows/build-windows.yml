@@ -28,61 +28,84 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.32.x'
+          flutter-version: '3.24.x'
           channel: 'stable'
           cache: true
+
+      - name: Flutter version info
+        run: |
+          flutter --version
+          dart --version
 
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Analyze (warnings only)
-        run: flutter analyze --no-fatal-warnings || true
-
       - name: Build Windows release
         run: flutter build windows --release
+
+      - name: List build output
+        shell: pwsh
+        run: |
+          Write-Host "=== Build output directory ==="
+          if (Test-Path "build\windows") {
+            Get-ChildItem -Recurse "build\windows" -Filter "*.exe" | Select-Object FullName, Length
+          } else {
+            Write-Host "build\windows not found"
+          }
 
       - name: Zip build artifacts
         shell: pwsh
         run: |
-          $buildDir = "build\windows\x64\runner\Release"
-          $zipName  = "DailyTasker-Windows.zip"
+          $exePath = Get-ChildItem -Recurse "build\windows" -Filter "*.exe" | Select-Object -First 1
+          if ($null -eq $exePath) {
+            Write-Error "EXE not found in build\windows"
+            exit 1
+          }
+          $buildDir = $exePath.DirectoryName
+          Write-Host "Build dir: $buildDir"
+          $zipName = "DailyTasker-Windows.zip"
           Compress-Archive -Path "$buildDir\*" -DestinationPath $zipName -Force
-          Write-Host "Created: $zipName"
-          Get-Item $zipName | Select-Object Name, Length
+          Write-Host "Created: $zipName ($(((Get-Item $zipName).Length / 1MB).ToString('F1')) MB)"
 
       - name: Get version
         id: version
         shell: pwsh
         run: |
-          $ver = (Select-String -Path pubspec.yaml -Pattern '^version:\s+(.+)').Matches[0].Groups[1].Value.Trim()
-          $buildNum = $ver -replace '\+.*', ''
-          echo "version=$buildNum" >> $env:GITHUB_OUTPUT
-          echo "Version: $buildNum"
+          $content = Get-Content pubspec.yaml -Raw
+          if ($content -match 'version:\s+(\S+)') {
+            $ver = $matches[1] -replace '\+.*', ''
+            echo "version=$ver" >> $env:GITHUB_OUTPUT
+            Write-Host "Version: $ver"
+          } else {
+            echo "version=1.0.0" >> $env:GITHUB_OUTPUT
+            Write-Host "Version: 1.0.0 (fallback)"
+          }
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: "v${{ steps.version.outputs.version }}-build${{ github.run_number }}"
+          tag_name: "build-${{ github.run_number }}"
           name: "Daily Tasker v${{ steps.version.outputs.version }} (Build ${{ github.run_number }})"
           body: |
             ## Daily Tasker Windows版
 
             ### ダウンロード方法
             1. 下の `DailyTasker-Windows.zip` をクリックしてダウンロード
-            2. ZIPを展開（右クリック → すべて展開）
+            2. ZIPを右クリック → **「すべて展開」**
             3. `daily_tasker.exe` をダブルクリックして起動
 
             ### 動作環境
             - Windows 10 / 11（64bit）
-            - インストール不要、展開してすぐ使えます
+            - インストール不要・展開してすぐ使えます
 
             ### リリースノート
             ${{ github.event.inputs.release_note || '最新の変更を反映したビルドです。' }}
 
             ---
-            🔨 Built automatically by GitHub Actions
+            🔨 Built by GitHub Actions (Run #${{ github.run_number }})
           files: DailyTasker-Windows.zip
           draft: false
           prerelease: false
+          make_latest: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
