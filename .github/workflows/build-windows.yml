@@ -19,8 +19,8 @@ permissions:
 jobs:
   build-windows:
     name: Build Windows Desktop
-    # runs-on: windows-latest
-    runs-on: self-hosted
+    runs-on: windows-latest
+    # runs-on: self-hosted
 
     steps:
       - name: Checkout repository
@@ -110,3 +110,9 @@ jobs:
           make_latest: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
+      # - name: Notify on Mac
+      #   if: always() # 成功しても失敗しても実行
+      #   run: |
+      #     osascript -e 'display notification "ビルドが完了しました！" with title "GitHub Actions" sound name "Glass"'
+
