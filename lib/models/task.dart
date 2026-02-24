@@ -37,6 +37,7 @@ enum TaskPriority {
 
 class Task {
   final String id;
+  final String boardId;
   String title;
   String? note;
   TaskStatus status;
@@ -46,6 +47,7 @@ class Task {
 
   Task({
     String? id,
+    required this.boardId,
     required this.title,
     this.note,
     this.status = TaskStatus.fresh,
@@ -95,6 +97,7 @@ class Task {
   Map<String, dynamic> toMap() {
     return {
       'id': id,
+      'boardId': boardId,
       'title': title,
       'note': note,
       'status': status.index,
@@ -108,6 +111,8 @@ class Task {
   factory Task.fromMap(Map<dynamic, dynamic> map) {
     return Task(
       id: map['id'] as String,
+      // 旧データ互換: boardId がなければ 'default' を使う
+      boardId: (map['boardId'] as String?) ?? 'default',
       title: map['title'] as String,
       note: map['note'] as String?,
       status: TaskStatus.values[map['status'] as int],
@@ -124,9 +129,11 @@ class Task {
     String? note,
     TaskStatus? status,
     TaskPriority? priority,
+    String? boardId,
   }) {
     return Task(
       id: id,
+      boardId: boardId ?? this.boardId,
       title: title ?? this.title,
       note: note ?? this.note,
       status: status ?? this.status,

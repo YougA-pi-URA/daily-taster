@@ -6,79 +6,111 @@ import '../providers/task_provider.dart';
 import '../theme.dart';
 import '../widgets/kanban_section.dart';
 import '../widgets/quick_add_bar.dart';
+import '../widgets/board_side_menu.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  bool _menuOpen = false;
+
+  void _toggleMenu() => setState(() => _menuOpen = !_menuOpen);
+  void _closeMenu() => setState(() => _menuOpen = false);
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
-        child: Column(
+        child: Stack(
           children: [
-            // Header
-            const _Header(),
-            // Progress bar
-            const _ProgressBar(),
-            const Divider(height: 1, color: AppColors.divider),
-            // Kanban sections (scrollable)
-            Expanded(
-              child: Consumer<TaskProvider>(
-                builder: (context, provider, _) {
-                  return ListView(
-                    padding: const EdgeInsets.only(top: 4, bottom: 8),
-                    children: [
-                      // STOCK section with filter
-                      KanbanSection(
-                        title: 'STOCK',
-                        sectionKey: 'stock',
-                        tasks: provider.stockTasks,
-                        totalCount: provider.stockTasks.length,
-                        showStatusTags: true,
-                        trailing: _StockFilter(provider: provider),
-                      ),
-                      const Divider(height: 1, color: AppColors.divider, indent: 12, endIndent: 12),
-                      // DOING section
-                      KanbanSection(
-                        title: 'DOING',
-                        sectionKey: 'doing',
-                        tasks: provider.doingTasks,
-                        totalCount: provider.doingTasks.length,
-                      ),
-                      const Divider(height: 1, color: AppColors.divider, indent: 12, endIndent: 12),
-                      // REVIEW section
-                      KanbanSection(
-                        title: 'REVIEW',
-                        sectionKey: 'review',
-                        tasks: provider.reviewTasks,
-                        totalCount: provider.reviewTasks.length,
-                      ),
-                      const Divider(height: 1, color: AppColors.divider, indent: 12, endIndent: 12),
-                      // DONE section (collapsible)
-                      KanbanSection(
-                        title: 'DONE',
-                        sectionKey: 'done',
-                        tasks: provider.doneTasks,
-                        totalCount: provider.doneTasks.length,
-                        collapsible: true,
-                        initiallyCollapsed: true,
-                        trailing: provider.doneTasks.isNotEmpty
-                            ? GestureDetector(
-                                onTap: () => _confirmClearDone(context, provider),
-                                child: const Padding(
-                                  padding: EdgeInsets.only(right: 4),
-                                  child: Icon(Icons.delete_sweep, size: 16, color: AppColors.textMuted),
-                                ),
-                              )
-                            : null,
-                      ),
-                    ],
-                  );
-                },
-              ),
+            // ── Main kanban content ──────────────────────────
+            Column(
+              children: [
+                _Header(onMenuTap: _toggleMenu),
+                const _ProgressBar(),
+                const Divider(height: 1, color: AppColors.divider),
+                Expanded(
+                  child: Consumer<TaskProvider>(
+                    builder: (context, provider, _) {
+                      return ListView(
+                        padding:
+                            const EdgeInsets.only(top: 4, bottom: 8),
+                        children: [
+                          KanbanSection(
+                            title: 'STOCK',
+                            sectionKey: 'stock',
+                            tasks: provider.stockTasks,
+                            totalCount: provider.stockTasks.length,
+                            showStatusTags: true,
+                            trailing:
+                                _StockFilter(provider: provider),
+                          ),
+                          const Divider(
+                              height: 1,
+                              color: AppColors.divider,
+                              indent: 12,
+                              endIndent: 12),
+                          KanbanSection(
+                            title: 'DOING',
+                            sectionKey: 'doing',
+                            tasks: provider.doingTasks,
+                            totalCount: provider.doingTasks.length,
+                          ),
+                          const Divider(
+                              height: 1,
+                              color: AppColors.divider,
+                              indent: 12,
+                              endIndent: 12),
+                          KanbanSection(
+                            title: 'REVIEW',
+                            sectionKey: 'review',
+                            tasks: provider.reviewTasks,
+                            totalCount: provider.reviewTasks.length,
+                          ),
+                          const Divider(
+                              height: 1,
+                              color: AppColors.divider,
+                              indent: 12,
+                              endIndent: 12),
+                          KanbanSection(
+                            title: 'DONE',
+                            sectionKey: 'done',
+                            tasks: provider.doneTasks,
+                            totalCount: provider.doneTasks.length,
+                            collapsible: true,
+                            initiallyCollapsed: true,
+                            trailing:
+                                provider.doneTasks.isNotEmpty
+                                    ? GestureDetector(
+                                        onTap: () =>
+                                            _confirmClearDone(
+                                                context, provider),
+                                        child: const Padding(
+                                          padding:
+                                              EdgeInsets.only(right: 4),
+                                          child: Icon(
+                                              Icons.delete_sweep,
+                                              size: 16,
+                                              color: AppColors.textMuted),
+                                        ),
+                                      )
+                                    : null,
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                ),
+                const QuickAddBar(),
+              ],
             ),
-            // Quick add bar
-            const QuickAddBar(),
+
+            // ── Side menu overlay ────────────────────────────
+            BoardSideMenu(isOpen: _menuOpen, onClose: _closeMenu),
           ],
         ),
       ),
@@ -90,22 +122,26 @@ class HomeScreen extends StatelessWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.surface,
-        title: const Text('Clear completed tasks?', style: TextStyle(fontSize: 14)),
+        title: const Text('Clear completed tasks?',
+            style: TextStyle(fontSize: 14)),
         content: Text(
           '${provider.doneTasks.length} completed tasks will be removed.',
-          style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
+          style: const TextStyle(
+              fontSize: 13, color: AppColors.textSecondary),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel', style: TextStyle(color: AppColors.textMuted)),
+            child: const Text('Cancel',
+                style: TextStyle(color: AppColors.textMuted)),
           ),
           TextButton(
             onPressed: () {
               provider.clearDone();
               Navigator.pop(ctx);
             },
-            child: const Text('Clear', style: TextStyle(color: AppColors.urgentPriority)),
+            child: const Text('Clear',
+                style: TextStyle(color: AppColors.urgentPriority)),
           ),
         ],
       ),
@@ -113,8 +149,11 @@ class HomeScreen extends StatelessWidget {
   }
 }
 
+// ── Header ───────────────────────────────────────────────────────────────────
+
 class _Header extends StatefulWidget {
-  const _Header();
+  final VoidCallback onMenuTap;
+  const _Header({required this.onMenuTap});
 
   @override
   State<_Header> createState() => _HeaderState();
@@ -130,9 +169,7 @@ class _HeaderState extends State<_Header> {
     super.initState();
     _ctrl = TextEditingController();
     _focusNode.addListener(() {
-      if (!_focusNode.hasFocus && _editing) {
-        _save();
-      }
+      if (!_focusNode.hasFocus && _editing) _save();
     });
   }
 
@@ -148,19 +185,15 @@ class _HeaderState extends State<_Header> {
       _ctrl.text = currentName;
       _editing = true;
     });
-    // フォーカスを次フレームで当てる
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _focusNode.requestFocus();
       _ctrl.selection = TextSelection(
-        baseOffset: 0,
-        extentOffset: _ctrl.text.length,
-      );
+          baseOffset: 0, extentOffset: _ctrl.text.length);
     });
   }
 
   void _save() {
-    final provider = context.read<TaskProvider>();
-    provider.setBoardName(_ctrl.text);
+    context.read<TaskProvider>().setBoardName(_ctrl.text);
     setState(() => _editing = false);
   }
 
@@ -173,10 +206,21 @@ class _HeaderState extends State<_Header> {
     return Consumer<TaskProvider>(
       builder: (context, provider, _) {
         return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          padding:
+              const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           child: Row(
             children: [
-              // Board name (tappable / editable)
+              // Hamburger / close icon
+              GestureDetector(
+                onTap: widget.onMenuTap,
+                child: const Padding(
+                  padding: EdgeInsets.only(right: 10),
+                  child: Icon(Icons.menu,
+                      size: 18, color: AppColors.textMuted),
+                ),
+              ),
+
+              // Board name (editable)
               Expanded(
                 child: _editing
                     ? TextField(
@@ -190,12 +234,16 @@ class _HeaderState extends State<_Header> {
                         ),
                         decoration: const InputDecoration(
                           isDense: true,
-                          contentPadding: EdgeInsets.symmetric(vertical: 2, horizontal: 4),
+                          contentPadding: EdgeInsets.symmetric(
+                              vertical: 2, horizontal: 4),
                           border: OutlineInputBorder(
-                            borderSide: BorderSide(color: AppColors.stockAccent, width: 1),
+                            borderSide: BorderSide(
+                                color: AppColors.stockAccent, width: 1),
                           ),
                           focusedBorder: OutlineInputBorder(
-                            borderSide: BorderSide(color: AppColors.stockAccent, width: 1.5),
+                            borderSide: BorderSide(
+                                color: AppColors.stockAccent,
+                                width: 1.5),
                           ),
                           filled: true,
                           fillColor: AppColors.surfaceLight,
@@ -208,32 +256,31 @@ class _HeaderState extends State<_Header> {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text(
-                              provider.boardName,
-                              style: const TextStyle(
-                                color: AppColors.textPrimary,
-                                fontSize: 15,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: -0.3,
+                            Flexible(
+                              child: Text(
+                                provider.boardName,
+                                style: const TextStyle(
+                                  color: AppColors.textPrimary,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: -0.3,
+                                ),
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
                             const SizedBox(width: 4),
-                            const Icon(
-                              Icons.edit,
-                              size: 11,
-                              color: AppColors.textMuted,
-                            ),
+                            const Icon(Icons.edit,
+                                size: 11, color: AppColors.textMuted),
                           ],
                         ),
                       ),
               ),
+
               // Date
               Text(
                 '$dateStr $dayStr',
                 style: const TextStyle(
-                  color: AppColors.textMuted,
-                  fontSize: 12,
-                ),
+                    color: AppColors.textMuted, fontSize: 12),
               ),
             ],
           ),
@@ -242,6 +289,8 @@ class _HeaderState extends State<_Header> {
     );
   }
 }
+
+// ── Progress bar ─────────────────────────────────────────────────────────────
 
 class _ProgressBar extends StatelessWidget {
   const _ProgressBar();
@@ -255,7 +304,8 @@ class _ProgressBar extends StatelessWidget {
         final progress = total > 0 ? done / total : 0.0;
 
         return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          padding:
+              const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
           child: Row(
             children: [
               Expanded(
@@ -264,7 +314,8 @@ class _ProgressBar extends StatelessWidget {
                   child: LinearProgressIndicator(
                     value: progress,
                     backgroundColor: AppColors.surfaceLight,
-                    valueColor: const AlwaysStoppedAnimation<Color>(AppColors.doneAccent),
+                    valueColor: const AlwaysStoppedAnimation<Color>(
+                        AppColors.doneAccent),
                     minHeight: 3,
                   ),
                 ),
@@ -285,6 +336,8 @@ class _ProgressBar extends StatelessWidget {
     );
   }
 }
+
+// ── Stock filter ──────────────────────────────────────────────────────────────
 
 class _StockFilter extends StatelessWidget {
   final TaskProvider provider;
@@ -346,13 +399,18 @@ class _FilterChip extends StatelessWidget {
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        padding:
+            const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
         constraints: const BoxConstraints(minHeight: 32),
         decoration: BoxDecoration(
-          color: isActive ? chipColor.withValues(alpha: 0.25) : Colors.transparent,
+          color: isActive
+              ? chipColor.withValues(alpha: 0.25)
+              : Colors.transparent,
           borderRadius: BorderRadius.circular(6),
           border: Border.all(
-            color: isActive ? chipColor.withValues(alpha: 0.5) : AppColors.divider,
+            color: isActive
+                ? chipColor.withValues(alpha: 0.5)
+                : AppColors.divider,
             width: isActive ? 1.0 : 0.5,
           ),
         ),
