@@ -57,13 +57,13 @@ jobs:
       - name: Zip build artifacts
         shell: pwsh
         run: |
-          $exePath = Get-ChildItem -Recurse "build\windows" -Filter "*.exe" | Select-Object -First 1
-          if ($null -eq $exePath) {
-            Write-Error "EXE not found in build\windows"
+          $buildDir = "build\windows\x64\runner\Release"
+          if (-not (Test-Path $buildDir)) {
+            Write-Error "Build dir not found: $buildDir"
             exit 1
           }
-          $buildDir = $exePath.DirectoryName
           Write-Host "Build dir: $buildDir"
+          Get-ChildItem $buildDir | Select-Object Name, Length
           $zipName = "DailyTasker-Windows.zip"
           Compress-Archive -Path "$buildDir\*" -DestinationPath $zipName -Force
           Write-Host "Created: $zipName ($(((Get-Item $zipName).Length / 1MB).ToString('F1')) MB)"
