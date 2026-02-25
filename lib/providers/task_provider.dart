@@ -78,30 +78,97 @@ class TaskProvider extends ChangeNotifier {
     _box = await Hive.openBox<Map>(_boxName);
     _metaBox = await Hive.openBox(_metaBoxName);
 
-    _loadBoards();
+    await _loadBoards();
     _loadTasks();
   }
 
-  void _loadBoards() {
+  Future<void> _loadBoards() async {
     final raw = _metaBox.get('boards');
+
     if (raw != null && raw is List && raw.isNotEmpty) {
-      _boards = raw
-          .map((e) => BoardMeta.fromMap(e as Map))
-          .toList();
-    } else {
-      // 初回 or 旧データ: デフォルトボードを作成
-      final oldName =
-          (_metaBox.get('boardName') as String?) ?? 'Daily Tasker';
+      // 既存データをそのまま復元
+      _boards = raw.map((e) => BoardMeta.fromMap(e as Map)).toList();
+    } else if (_metaBox.get('boardName') != null) {
+      // 旧データ（UPG-008 以前）: boardName キーのみ存在 → マイグレーション
+      final oldName = _metaBox.get('boardName') as String;
       _boards = [BoardMeta(id: 'default', name: oldName)];
-      _saveBoards();
+      await _saveBoards();
+    } else {
+      // ── 初回起動: ウェルカムボードを作成 ──
+      const welcomeId = 'welcome';
+      _boards = [BoardMeta(id: welcomeId, name: 'Welcome to Daily Tasker')];
+      await _saveBoards();
+      await _seedWelcomeTasks(welcomeId);
     }
 
     final savedActive = _metaBox.get('activeBoardId') as String?;
-    if (savedActive != null &&
-        _boards.any((b) => b.id == savedActive)) {
+    if (savedActive != null && _boards.any((b) => b.id == savedActive)) {
       _activeBoardId = savedActive;
     } else {
       _activeBoardId = _boards.first.id;
+    }
+  }
+
+  /// 初回起動時にウェルカムボードへプリセットタスクを投入する
+  Future<void> _seedWelcomeTasks(String boardId) async {
+    final presets = [
+      // DOING: 今まさにやること体験用
+      Task(
+        boardId: boardId,
+        title: 'Daily Tasker を使ってみる',
+        status: TaskStatus.doing,
+        priority: TaskPriority.urgent,
+        note: '今日のタスクはここに置く。完了したら長押し → DONE へ移動しよう。',
+      ),
+      Task(
+        boardId: boardId,
+        title: 'チュートリアルを読む',
+        status: TaskStatus.doing,
+        priority: TaskPriority.normal,
+        note: 'このボードはサンプル。☰ メニューから新しいボードを作って実際に使い始めよう。',
+      ),
+      // STOCK: 積みタスクの例
+      Task(
+        boardId: boardId,
+        title: '最初の本番ボードを作る',
+        status: TaskStatus.fresh,
+        priority: TaskPriority.normal,
+        note: '☰ → "+ Add new board" で仮名ボードが即作成される。あとでボード名を変更しよう。',
+      ),
+      Task(
+        boardId: boardId,
+        title: 'タスクを追加してみる',
+        status: TaskStatus.fresh,
+        priority: TaskPriority.low,
+        note: '画面下の入力欄に入力して Enter。優先度は長押しで変更できる。',
+      ),
+      Task(
+        boardId: boardId,
+        title: '一時停止したいタスク',
+        status: TaskStatus.hold,
+        priority: TaskPriority.low,
+        note: 'HOLD は「今日はやらない」タスク置き場。フィルター HLD で絞り込める。',
+      ),
+      // REVIEW: 誰かに渡したタスクの例
+      Task(
+        boardId: boardId,
+        title: 'レビュー依頼中のタスク',
+        status: TaskStatus.review,
+        priority: TaskPriority.normal,
+        note: 'REVIEW は「誰かに渡した・返答待ち」のレーン。戻ってきたら RET タグで STOCK に戻る。',
+      ),
+      // DONE: 達成感を感じてもらう用
+      Task(
+        boardId: boardId,
+        title: 'Daily Tasker をインストール',
+        status: TaskStatus.done,
+        priority: TaskPriority.normal,
+        note: 'お疲れさまでした！上の DONE タスクを消すには 🗑 アイコンを使おう。',
+      ),
+    ];
+
+    for (final task in presets) {
+      await _box.put(task.id, task.toMap());
     }
   }
 
